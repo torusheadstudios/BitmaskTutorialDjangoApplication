@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clothing Store</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        .selection-section,
+        .cart-section {
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+
+        #cart-items {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Define size classes */
+        .size-xs {
+            width: 30px;
+            height: 30px;
+        }
+
+        .size-s {
+            width: 40px;
+            height: 40px;
+        }
+
+        .size-m {
+            width: 50px;
+            height: 50px;
+        }
+
+        .size-l {
+            width: 60px;
+            height: 60px;
+        }
+
+        .size-xl {
+            width: 70px;
+            height: 70px;
+        }
+
+        .size-xxl {
+            width: 80px;
+            height: 80px;
+        }
+
+        /* Material classes */
+        .cotton {
+            background-color: #f0f8ff;
+            /* Alice Blue */
+        }
+
+        .polyester {
+            background-color: #d3d3d3;
+            /* Light Gray */
+        }
+
+        .linen {
+            background-color: #f5f5dc;
+            /* Beige */
+        }
+
+        .denim {
+            background-color: #4169e1;
+            /* Royal Blue */
+        }
+
+        .delete-all-btn {
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Full Python Application Example: Clothing Store</h1>
+            </div>
+            <div class="col-md-6 selection-section">
+                <h3>Make Your Selections</h3>
+                <form id="order-form">
+                    <div class="form-group">
+                        <label for="product-type">Product</label>
+                        <select id="product-type" class="form-control">
+                            <option value="shirt">Shirt</option>
+                            <option value="pants">Pants</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="color">Color</label>
+                        <select id="color" class="form-control">
+                            {% for color in colors %}
+                            <option value="{{ color }}">{{ color }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="size">Size</label>
+                        <select id="size" class="form-control">
+                            {% for size in sizes %}
+                            <option value="{{ size }}">{{ size }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="material">Material</label>
+                        <select id="material" class="form-control">
+                            {% for material in materials %}
+                            <option value="{{ material }}">{{ material }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity">Quantity</label>
+                        <select id="quantity" class="form-control">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="addToCart()">Add to Cart</button>
+                </form>
+            </div>
+            <div class="col-md-6 cart-section">
+                <h3>Cart</h3>
+                <form id="cart-form">
+                    <div class="form-group">
+                        <label for="order-name">Order Name</label>
+                        <input type="text" id="order-name" class="form-control" value="MyOrder">
+                    </div>
+                    <div id="cart-items"></div>
+                    <button type="button" class="btn btn-success" onclick="submitOrder()">Submit Order</button>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 d-flex justify-content-between align-items-center">
+                <h3>Orders</h3>
+                <button class="btn btn-danger delete-all-btn" onclick="deleteAllOrderItems()">Delete All</button>
+            </div>
+            <div class="col-md-12">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Order Name</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Bitmask</th>
+                            <th>Details</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        const COLORS = {{ colors| safe }};
+        const SIZES = {{ sizes| safe }};
+        const MATERIALS = {{ materials| safe }};
+        const COLOR_BITS = COLORS.reduce((acc, color, index) => { acc[color] = 1 << index; return acc; }, {});
+        const SIZE_BITS = SIZES.reduce((acc, size, index) => { acc[size] = 1 << (index + COLORS.length); return acc; }, {});
+        const MATERIAL_BITS = MATERIALS.reduce((acc, material, index) => { acc[material] = 1 << (index + COLORS.length + SIZES.length); return acc; }, {});
+
+        function populateDropdown(id, values) {
+            const dropdown = document.getElementById(id);
+            dropdown.innerHTML = '';
+            values.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.text = value;
+                dropdown.appendChild(option);
+            });
+        }
+
+        populateDropdown('color', COLORS);
+        populateDropdown('size', SIZES);
+        populateDropdown('material', MATERIALS);
+
+        function generateCartItemHTML(bitmask, productType) {
+            const color = COLORS.find(color => bitmask & COLOR_BITS[color]);
+            const size = SIZES.find(size => bitmask & SIZE_BITS[size]);
+            const material = MATERIALS.find(material => bitmask & MATERIAL_BITS[material]);
+
+            let innerHTML = `
+        <div class="item-icon ${size.toLowerCase()}" style="padding: 5px">
+            <svg class="size-${size.toLowerCase()}" xmlns="http://www.w3.org/2000/svg" fill="${color.toLowerCase()}" viewBox="0 0 16 16">
+                <path d="m15.867 7.593-1.534.967a.544.544 0 0 1-.698-.118l-.762-.957v7.256a.476.476 0 0 1-.475.475h-7.79a.476.476 0 0 1-.475-.475V7.477l-.769.965a.544.544 0 0 1-.697.118l-1.535-.967a.387.387 0 0 1-.083-.607l2.245-2.492a2.814 2.814 0 0 1 2.092-.932h.935a2.374 2.374 0 0 0 4.364 0h.934a2.816 2.816 0 0 1 2.093.933l2.24 2.49a.388.388 0 0 1-.085.608z"/>
+            </svg>
+            <span>${productType} (${size}, ${color}, <span class="${material.toLowerCase()}">${material}</span>)</span>
+        </div>
+    `;
+
+            if (productType === 'pants') {
+                innerHTML = `
+            <div class="item-icon ${size.toLowerCase()}" style="padding: 5px">
+                <svg class="size-${size.toLowerCase()}" xmlns="http://www.w3.org/2000/svg" fill="${color.toLowerCase()}" viewBox="-236 28 256 256">
+                    <path d="M-121.8,276l10.2-171.7c0-3.3,2.7-5.5,5.5-5.5h1.1c3.3,0,5.5,2.7,5.5,5.5L-89.4,276H-39l-9.8-220.3V36h-113.6v19.7
+                    l-9.8,220.3H-121.8z M-95.8,41.5h41.5v7.6h-41.5V41.5z M-105.6,59.5c2.2,0,3.3,1.6,3.3,3.3c0,1.6-1.1,3.3-3.3,3.3
+                    c-1.6,0-3.3-1.6-3.3-3.3C-108.9,60.6-107.2,59.5-105.6,59.5z M-105.6,73.7c2.2,0,3.3,1.6,3.3,3.3s-1.1,3.3-3.3,3.3
+                    c-1.6,0-3.3-1.6-3.3-3.3C-108.9,74.8-107.2,73.7-105.6,73.7z M-156.9,41.5h42v7.6h-42V41.5z"/>
+                </svg>
+                <span>${productType} (${size}, ${color}, <span class="${material.toLowerCase()}">${material}</span>)</span>
+            </div>
+        `;
+            }
+
+            return innerHTML;
+        }
+
+        function addToCart() {
+            const productType = document.getElementById('product-type').value;
+            const color = document.getElementById('color').value;
+            const size = document.getElementById('size').value;
+            const material = document.getElementById('material').value;
+            const quantity = document.getElementById('quantity').value;
+            const cartItems = document.getElementById('cart-items');
+
+            let bitmask = 0;
+            bitmask |= COLOR_BITS[color];
+            bitmask |= SIZE_BITS[size];
+            bitmask |= MATERIAL_BITS[material];
+
+            for (let i = 0; i < quantity; i++) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'cart-item';
+                itemDiv.dataset.bitmask = bitmask;
+                itemDiv.innerHTML = generateCartItemHTML(bitmask, productType);
+                itemDiv.innerHTML += `<button class="delete-btn"><i class="fas fa-trash"></i></button>`;
+                itemDiv.innerHTML += `<br><div class="bitmask-display">Bitmask: ${bitmask}</div>`;
+
+                // Add event listener for delete button
+                const deleteBtn = itemDiv.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', function () {
+                    itemDiv.remove();
+                });
+
+                cartItems.appendChild(itemDiv);
+            }
+        }
+
+        // Submit order functionality
+        function submitOrder() {
+            const orderName = document.getElementById('order-name').value;
+            const cartItems = document.querySelectorAll('.cart-item');
+            const orderData = {
+                order_name: orderName,
+                items: []
+            };
+
+            cartItems.forEach(item => {
+                const productType = item.querySelector('span').innerText.split(' ')[0];
+                const bitmask = parseInt(item.dataset.bitmask, 10);
+                orderData.items.push({
+                    product: productType.trim(),
+                    bitmask: bitmask
+                });
+            });
+
+            fetch('/store/order_items/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            }).then(response => response.json()).then(data => {
+                console.log('Order submitted:', data);
+                // Refresh orders list
+                fetchOrders();
+            });
+        }
+
+        // Fetch orders
+        function fetchOrders() {
+            fetch('/store/order_items/')
+                .then(response => response.json())
+                .then(data => {
+                    const ordersList = document.getElementById('orders-list');
+                    ordersList.innerHTML = '';
+                    data.forEach(order => {
+                        const row = document.createElement('tr');
+                        productDetails = generateCartItemHTML(order.bitmask, order.product);
+                        row.innerHTML = `
+                    <td>${order.order_name}</td>
+                    <td>${order.product}</td>
+                    <td>${order.quantity}</td>
+                    <td>${order.bitmask}</td>
+                    <td>${productDetails}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteOrderItem(${order.id})">Delete</button>
+                    </td>`;
+                        ordersList.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching orders:', error);
+                });
+        }
+
+        // Delete order item
+        function deleteOrderItem(orderItemId) {
+            fetch(`/store/order_items/delete/${orderItemId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.status === 204) {
+                    console.log('Order item deleted successfully');
+                    // Refresh orders list
+                    fetchOrders();
+                } else {
+                    console.error('Error deleting order item');
+                }
+            }).catch(error => {
+                console.error('Error deleting order item:', error);
+            });
+        }
+
+        // Delete all order items
+        function deleteAllOrderItems() {
+            if (confirm('Are you sure you want to delete all order items?')) {
+                const orderItems = document.querySelectorAll('#orders-list tr');
+                orderItems.forEach(orderItem => {
+                    const orderId = orderItem.querySelector('button').getAttribute('onclick').match(/\d+/)[0];
+                    deleteOrderItem(orderId);
+                });
+            }
+        }
+
+
+        // Initial fetch of orders
+        fetchOrders();
+    </script>
+</body>
+
+</html>
